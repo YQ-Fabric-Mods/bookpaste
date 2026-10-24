@@ -1,19 +1,21 @@
 package ru.svyaton.bookpaste;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.KeyMapping;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.gui.screens.options.controls.ControlsScreen;
 
 public final class BookPasteHotkeys {
-    public static final KeyBinding TOGGLE_FORMAT_MODE = KeyBindingHelper.registerKeyBinding(
-            new KeyBinding(
+    public static final KeyMapping TOGGLE_FORMAT_MODE = KeyMappingHelper.registerKeyMapping(
+            new KeyMapping(
                     "key.bookpaste.toggle_format_mode",
-                    InputUtil.Type.KEYSYM,
-                    InputUtil.GLFW_KEY_F8,
-                    "key.category.bookpaste.controls"
+                    InputConstants.Type.KEYBOARD,
+                    InputConstants.KEY_F8,
+                    KeyMapping.Category.register(Identifier.fromNamespaceAndPath("bookpaste", "controls"))
             )
     );
 
@@ -22,36 +24,36 @@ public final class BookPasteHotkeys {
 
     public static void initialize() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (shouldIgnoreHotkey(client.currentScreen)) {
-                while (TOGGLE_FORMAT_MODE.wasPressed()) {
+            if (shouldIgnoreHotkey(client.gui.screen())) {
+                while (TOGGLE_FORMAT_MODE.consumeClick()) {
                 }
                 return;
             }
 
-            while (TOGGLE_FORMAT_MODE.wasPressed()) {
+            while (TOGGLE_FORMAT_MODE.consumeClick()) {
                 cycleFormatMode(client);
             }
         });
     }
 
-    public static void cycleFormatMode(MinecraftClient client) {
+    public static void cycleFormatMode(Minecraft client) {
         PasteFormatMode nextMode = BookPasteConfigManager.getConfig().formatMode().next();
         BookPasteConfigManager.getConfig().setFormatMode(nextMode);
         BookPasteConfigManager.save();
         BookPasteMessages.showModeChanged(client, nextMode);
     }
 
-    public static void setToggleFormatModeKey(MinecraftClient client, InputUtil.Key key) {
-        TOGGLE_FORMAT_MODE.setBoundKey(key);
-        KeyBinding.updateKeysByCode();
-        client.options.write();
+    public static void setToggleFormatModeKey(Minecraft client, InputConstants.Key key) {
+        TOGGLE_FORMAT_MODE.setKey(key);
+        KeyMapping.resetMapping();
+        client.options.save();
     }
 
-    public static void resetToggleFormatModeKey(MinecraftClient client) {
+    public static void resetToggleFormatModeKey(Minecraft client) {
         setToggleFormatModeKey(client, TOGGLE_FORMAT_MODE.getDefaultKey());
     }
 
     private static boolean shouldIgnoreHotkey(Screen screen) {
-        return false;
+        return screen instanceof ControlsScreen;
     }
 }

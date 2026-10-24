@@ -6,9 +6,9 @@ import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.function.Predicate;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public final class ScholarCompat {
     private static final String SCHOLAR_SCREEN = "io.github.mortuusars.scholar.client.gui.screen.edit.SpreadBookEditScreen";
@@ -20,17 +20,17 @@ public final class ScholarCompat {
     }
 
     public static boolean handlePaste() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (!(client.currentScreen instanceof Screen)) {
+        Minecraft client = Minecraft.getInstance();
+        if (!(client.gui.screen() instanceof Screen)) {
             return false;
         }
 
-        Screen screen = (Screen)client.currentScreen;
+        Screen screen = (Screen)client.gui.screen();
         if (!isScholarScreen(screen.getClass())) {
             return false;
         }
 
-        String clipboard = client.keyboard.getClipboard();
+        String clipboard = client.keyboardHandler.getClipboard();
         if (clipboard == null || clipboard.isBlank()) {
             return false;
         }
@@ -90,7 +90,7 @@ public final class ScholarCompat {
             }
 
             if (!changed) {
-                client.keyboard.setClipboard(remaining);
+                client.keyboardHandler.setClipboard(remaining);
                 sendStatus(client, pagesUsed, remaining);
                 return true;
             }
@@ -99,7 +99,7 @@ public final class ScholarCompat {
             setFieldValue(screen, "bookModified", true);
             invokeMethod(screen, "setTextBoxes", false);
 
-            client.keyboard.setClipboard(remaining);
+            client.keyboardHandler.setClipboard(remaining);
             sendStatus(client, pagesUsed, remaining);
             return true;
         } catch (ReflectiveOperationException | ClassCastException exception) {
@@ -107,13 +107,13 @@ public final class ScholarCompat {
         }
     }
 
-    private static void sendStatus(MinecraftClient client, int pagesUsed, String remaining) {
+    private static void sendStatus(Minecraft client, int pagesUsed, String remaining) {
         if (client.player == null) {
             return;
         }
 
-        client.player.sendMessage(PasteHelper.createStatusMessage(pagesUsed, remaining,
-                candidate -> fitsOnPage(candidate, client)), true);
+        client.player.sendOverlayMessage(PasteHelper.createStatusMessage(pagesUsed, remaining,
+                candidate -> fitsOnPage(candidate, client)));
     }
 
     private static boolean isScholarScreen(Class<?> type) {
@@ -127,7 +127,7 @@ public final class ScholarCompat {
         return false;
     }
 
-    private static boolean fitsOnPage(String candidate, MinecraftClient client) {
+    private static boolean fitsOnPage(String candidate, Minecraft client) {
         if (candidate.length() > 1024) {
             return false;
         }
@@ -138,7 +138,7 @@ public final class ScholarCompat {
                 if (method.getName().equals("fitInDimensions") && Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == 3) {
                     method.setAccessible(true);
                     @SuppressWarnings("unchecked")
-                    Predicate<String> predicate = (Predicate<String>)method.invoke(null, client.textRenderer, PAGE_WIDTH, PAGE_HEIGHT);
+                    Predicate<String> predicate = (Predicate<String>)method.invoke(null, client.font, PAGE_WIDTH, PAGE_HEIGHT);
                     return predicate.test(candidate);
                 }
             }
@@ -146,8 +146,8 @@ public final class ScholarCompat {
             // Fall back to vanilla-style line wrapping if Scholar internals are unavailable.
         }
 
-        int lineCount = client.textRenderer.wrapLines(Text.literal(candidate), PAGE_WIDTH).size();
-        return lineCount * client.textRenderer.fontHeight <= PAGE_HEIGHT;
+        int lineCount = client.font.split(Component.literal(candidate), PAGE_WIDTH).size();
+        return lineCount * client.font.lineHeight <= PAGE_HEIGHT;
     }
 
     private static Object getFieldValue(Object target, String name) throws ReflectiveOperationException {

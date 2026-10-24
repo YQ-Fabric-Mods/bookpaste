@@ -2,9 +2,10 @@ package ru.svyaton.bookpaste;
 
 import java.util.Locale;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.locale.Language;
 
 public final class PasteHelper {
     private PasteHelper() {
@@ -77,39 +78,39 @@ public final class PasteHelper {
         return new PageSlice(base + addition, trimLeft(remaining.substring(preferredCut)));
     }
 
-    public static Text createStatusMessage(int pagesUsed, String remaining, PageFitter fitter) {
+    public static Component createStatusMessage(int pagesUsed, String remaining, PageFitter fitter) {
         String languageCode = getLanguageCode();
         if (remaining.isEmpty()) {
-            return Text.literal(I18n.translate("text.bookpaste.done", pagesUsed,
+            return Component.literal(I18n.get("text.bookpaste.done", pagesUsed,
                     translateCountWord("page", pagesUsed, languageCode)));
         }
 
         int booksNeeded = Math.max(1, estimateBooksNeeded(remaining, fitter));
         if (pagesUsed == 0) {
-            return Text.literal(I18n.translate("text.bookpaste.nospace", booksNeeded,
+            return Component.literal(I18n.get("text.bookpaste.nospace", booksNeeded,
                     translateCountWord("book", booksNeeded, languageCode)));
         }
 
-        return Text.literal(I18n.translate("text.bookpaste.partial", remaining.length(), booksNeeded,
+        return Component.literal(I18n.get("text.bookpaste.partial", remaining.length(), booksNeeded,
                 translateCountWord("book", booksNeeded, languageCode)));
     }
 
-    public static Text createSignStatusMessage(int linesUsed, String remaining, PageFitter fitter) {
+    public static Component createSignStatusMessage(int linesUsed, String remaining, PageFitter fitter) {
         if (remaining == null || remaining.isEmpty()) {
             int shownLines = Math.max(1, linesUsed);
-            return Text.literal(I18n.translate("text.bookpaste.sign.done",
+            return Component.literal(I18n.get("text.bookpaste.sign.done",
                     shownLines,
                     translateCountWord("line", shownLines, getLanguageCode())));
         }
 
         int signsNeeded = estimateSignsNeeded(remaining, fitter);
         if (linesUsed <= 0) {
-            return Text.literal(I18n.translate("text.bookpaste.sign.nospace",
+            return Component.literal(I18n.get("text.bookpaste.sign.nospace",
                     signsNeeded,
                     translateCountWord("sign", signsNeeded, getLanguageCode())));
         }
 
-        return Text.literal(I18n.translate("text.bookpaste.sign.partial",
+        return Component.literal(I18n.get("text.bookpaste.sign.partial",
                 remaining.length(),
                 signsNeeded,
                 translateCountWord("sign", signsNeeded, getLanguageCode())));
@@ -372,11 +373,11 @@ public final class PasteHelper {
     }
 
     private static String getLanguageCode() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null) {
             return "en_us";
         }
-        Object language = client.getLanguageManager().getLanguage();
+        Object language = client.getLanguageManager().getSelected();
         if (language instanceof String code) {
             return code;
         }
@@ -395,10 +396,10 @@ public final class PasteHelper {
     private static String translateCountWord(String noun, int count, String languageCode) {
         String pluralForm = getPluralForm(count, languageCode);
         String key = "text.bookpaste.unit." + noun + "." + pluralForm;
-        if (!I18n.hasTranslation(key)) {
+        if (!Language.getInstance().has(key)) {
             key = "text.bookpaste.unit." + noun + ".other";
         }
-        return I18n.translate(key);
+        return I18n.get(key);
     }
 
     private static String getPluralForm(int count, String languageCode) {

@@ -1,6 +1,6 @@
 package ru.svyaton.bookpaste;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -13,12 +13,12 @@ public final class SignPasteCompat {
     }
 
     public static boolean handlePaste(Object screen) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.keyboard == null) {
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.keyboardHandler == null) {
             return false;
         }
 
-        String clipboard = client.keyboard.getClipboard();
+        String clipboard = client.keyboardHandler.getClipboard();
         if (clipboard == null || clipboard.trim().isEmpty()) {
             return false;
         }
@@ -43,7 +43,7 @@ public final class SignPasteCompat {
                 String before = remaining;
                 String base = messages[row] == null ? "" : messages[row];
                 PasteHelper.PageSlice slice = PasteHelper.buildSignLine(base, remaining,
-                        candidate -> client.textRenderer.getWidth(candidate) <= SIGN_LINE_WIDTH,
+                        candidate -> client.font.width(candidate) <= SIGN_LINE_WIDTH,
                         row == SIGN_LINE_COUNT - 1);
 
                 if (!slice.pageText().equals(base)) {
@@ -65,12 +65,12 @@ public final class SignPasteCompat {
 
             rowField.setInt(screen, lastRow);
             if (!remaining.isEmpty()) {
-                client.keyboard.setClipboard(remaining);
+                client.keyboardHandler.setClipboard(remaining);
             }
 
             if (client.player != null) {
-                client.player.sendMessage(PasteHelper.createSignStatusMessage(linesUsed, remaining,
-                        candidate -> client.textRenderer.getWidth(candidate) <= SIGN_LINE_WIDTH), true);
+                client.player.sendOverlayMessage(PasteHelper.createSignStatusMessage(linesUsed, remaining,
+                        candidate -> client.font.width(candidate) <= SIGN_LINE_WIDTH));
             }
             return true;
         } catch (ReflectiveOperationException | ClassCastException ex) {

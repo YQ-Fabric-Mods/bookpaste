@@ -6,12 +6,19 @@ import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.BookEditScreen;
-import net.minecraft.client.gui.widget.EditBoxWidget;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.BookEditScreen;
+import net.minecraft.client.gui.components.MultiLineEditBox;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.chat.Component;
+import net.minecraft.client.input.KeyEvent;
+import ru.svyaton.bookpaste.BookPasteInputUtil;
+import ru.svyaton.bookpaste.ScribbleCompat;
 import ru.svyaton.bookpaste.BookPasteBookEditAccess;
 import ru.svyaton.bookpaste.BookPasteScreenHandler;
 import ru.svyaton.bookpaste.PasteHelper;
@@ -28,30 +35,40 @@ abstract class BookEditScreenModernMixin implements BookPasteScreenHandler, Book
     private int currentPage;
 
     @Shadow
+    @Final
     private List<String> pages;
 
     @Shadow
-    private PlayerEntity player;
+    @Final
+    private Player owner;
 
     @Shadow
-    private EditBoxWidget editBox;
+    private MultiLineEditBox page;
 
     @Shadow
-    private void updatePage() {
+    private void updatePageContent() {
     }
 
     @Shadow
-    private void updatePreviousPageButtonVisibility() {
+    private void updateButtonVisibility() {
     }
 
     @Shadow
-    private void finalizeBook() {
+    private void saveChanges() {
+    }
+
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+    private void bookpaste$handlePasteShortcut(KeyEvent input, CallbackInfoReturnable<Boolean> cir) {
+        if (BookPasteInputUtil.isPasteShortcut(input)
+                && (ScribbleCompat.handlePaste() || this.bookpaste$handleLargePaste())) {
+            cir.setReturnValue(true);
+        }
     }
 
     @Override
     public boolean bookpaste$handleLargePaste() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        String clipboard = client.keyboard.getClipboard();
+        Minecraft client = Minecraft.getInstance();
+        String clipboard = client.keyboardHandler.getClipboard();
         if (clipboard == null || clipboard.isBlank()) {
             return false;
         }
@@ -62,20 +79,20 @@ abstract class BookEditScreenModernMixin implements BookPasteScreenHandler, Book
             return false;
         }
 
-        client.keyboard.setClipboard(result.remaining());
-        this.player.sendMessage(bookpaste$createStatusMessage(result, client), true);
+        client.keyboardHandler.setClipboard(result.remaining());
+        this.owner.sendOverlayMessage(bookpaste$createStatusMessage(result, client));
 
         return true;
     }
 
     @Unique
-    private PasteResult bookpaste$fillBook(String clipboard, MinecraftClient client) {
+    private PasteResult bookpaste$fillBook(String clipboard, Minecraft client) {
         if (this.pages.isEmpty()) {
             return new PasteResult(false, clipboard, 0);
         }
 
         List<String> workingPages = new ArrayList<>(this.pages);
-        workingPages.set(this.currentPage, this.editBox.getText());
+        workingPages.set(this.currentPage, this.page.getValue());
 
         String remaining = clipboard;
         int pagesUsed = 0;
@@ -112,16 +129,16 @@ abstract class BookEditScreenModernMixin implements BookPasteScreenHandler, Book
             this.pages.clear();
             this.pages.addAll(workingPages);
             this.currentPage = lastTouchedPage;
-            this.updatePage();
-            this.updatePreviousPageButtonVisibility();
-            this.finalizeBook();
+            this.updatePageContent();
+            this.updateButtonVisibility();
+            this.saveChanges();
         }
 
         return new PasteResult(true, remaining, pagesUsed);
     }
 
     @Unique
-    private boolean bookpaste$fitsOnPage(String candidate, MinecraftClient client) {
+    private boolean bookpaste$fitsOnPage(String candidate, Minecraft client) {
         if (candidate.length() > 1024) {
             return false;
         }
@@ -130,12 +147,12 @@ abstract class BookEditScreenModernMixin implements BookPasteScreenHandler, Book
             return true;
         }
 
-        int lineCount = client.textRenderer.wrapLines(Text.literal(candidate), BOOKPASTE_PAGE_WIDTH).size();
-        return lineCount * client.textRenderer.fontHeight <= BOOKPASTE_PAGE_HEIGHT;
+        int lineCount = client.font.split(Component.literal(candidate), BOOKPASTE_PAGE_WIDTH).size();
+        return lineCount * client.font.lineHeight <= BOOKPASTE_PAGE_HEIGHT;
     }
 
     @Unique
-    private Text bookpaste$createStatusMessage(PasteResult result, MinecraftClient client) {
+    private Component bookpaste$createStatusMessage(PasteResult result, Minecraft client) {
         return PasteHelper.createStatusMessage(result.pagesAdded(), result.remaining(),
                 candidate -> bookpaste$fitsOnPage(candidate, client));
     }
@@ -155,14 +172,14 @@ abstract class BookEditScreenModernMixin implements BookPasteScreenHandler, Book
         this.pages.clear();
         this.pages.addAll(pages);
         this.currentPage = currentPage;
-        this.updatePage();
-        this.updatePreviousPageButtonVisibility();
-        this.finalizeBook();
+        this.updatePageContent();
+        this.updateButtonVisibility();
+        this.saveChanges();
     }
 
     @Override
-    public PlayerEntity bookpaste$getPlayer() {
-        return this.player;
+    public Player bookpaste$getPlayer() {
+        return this.owner;
     }
 
     @Unique

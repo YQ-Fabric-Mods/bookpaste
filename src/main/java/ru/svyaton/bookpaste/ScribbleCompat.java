@@ -5,9 +5,9 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public final class ScribbleCompat {
     private static final int PAGE_WIDTH = 114;
@@ -17,7 +17,7 @@ public final class ScribbleCompat {
     private ScribbleCompat() {
     }
 
-    public static void tick(MinecraftClient client) {
+    public static void tick(Minecraft client) {
         boolean pasteShortcutDown = BookPasteInputUtil.isPasteShortcutPressed(client);
         if (pasteShortcutDown && !pasteShortcutWasDown) {
             handlePaste();
@@ -26,19 +26,19 @@ public final class ScribbleCompat {
     }
 
     public static boolean handlePaste() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (!(client.currentScreen instanceof Screen)) {
+        Minecraft client = Minecraft.getInstance();
+        if (!(client.gui.screen() instanceof Screen)) {
             return false;
         }
 
-        Screen screen = (Screen)client.currentScreen;
+        Screen screen = (Screen)client.gui.screen();
         if (!(screen instanceof BookPasteBookEditAccess) || !isScribbleScreen(screen)) {
             return false;
         }
 
         BookPasteBookEditAccess access = (BookPasteBookEditAccess)screen;
 
-        String clipboard = client.keyboard.getClipboard();
+        String clipboard = client.keyboardHandler.getClipboard();
         if (clipboard == null || clipboard.isBlank()) {
             return false;
         }
@@ -136,7 +136,7 @@ public final class ScribbleCompat {
                 }
             }
 
-            client.keyboard.setClipboard(remaining);
+            client.keyboardHandler.setClipboard(remaining);
             sendStatus(access, client, pagesUsed, remaining);
             return true;
         } catch (ReflectiveOperationException | ClassCastException exception) {
@@ -144,13 +144,13 @@ public final class ScribbleCompat {
         }
     }
 
-    private static void sendStatus(BookPasteBookEditAccess access, MinecraftClient client, int pagesUsed, String remaining) {
+    private static void sendStatus(BookPasteBookEditAccess access, Minecraft client, int pagesUsed, String remaining) {
         if (access.bookpaste$getPlayer() == null) {
             return;
         }
 
-        access.bookpaste$getPlayer().sendMessage(PasteHelper.createStatusMessage(pagesUsed, remaining,
-                candidate -> fitsOnPage(candidate, client)), true);
+        access.bookpaste$getPlayer().sendOverlayMessage(PasteHelper.createStatusMessage(pagesUsed, remaining,
+                candidate -> fitsOnPage(candidate, client)));
     }
 
     private static boolean isScribbleScreen(Screen screen) {
@@ -162,7 +162,7 @@ public final class ScribbleCompat {
         }
     }
 
-    private static boolean fitsOnPage(String candidate, MinecraftClient client) {
+    private static boolean fitsOnPage(String candidate, Minecraft client) {
         if (candidate.length() > 1024) {
             return false;
         }
@@ -172,8 +172,8 @@ public final class ScribbleCompat {
         }
 
         String visibleText = stripFormattingCodes(candidate);
-        int lineCount = client.textRenderer.wrapLines(Text.literal(visibleText), PAGE_WIDTH).size();
-        return lineCount * client.textRenderer.fontHeight <= PAGE_HEIGHT;
+        int lineCount = client.font.split(Component.literal(visibleText), PAGE_WIDTH).size();
+        return lineCount * client.font.lineHeight <= PAGE_HEIGHT;
     }
 
     private static String stripFormattingCodes(String text) {

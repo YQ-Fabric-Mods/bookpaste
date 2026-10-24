@@ -1,35 +1,33 @@
 package ru.svyaton.bookpaste;
 
-import org.lwjgl.glfw.GLFW;
-
-import net.minecraft.client.MinecraftClient;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
 
 public final class BookPasteInputUtil {
     private BookPasteInputUtil() {
     }
 
-    public static boolean isPasteShortcutPressed(MinecraftClient client) {
+    public static boolean isPasteShortcutPressed(Minecraft client) {
         if (client == null) {
             return false;
         }
 
-        long handle = client.getWindow().getHandle();
-        return (isControlDown(handle) && isKeyPressed(handle, GLFW.GLFW_KEY_V))
-                || (isShiftDown(handle) && isKeyPressed(handle, GLFW.GLFW_KEY_INSERT));
+        return (isControlDown() && InputConstants.isKeyDown(InputConstants.KEY_V))
+                || (isShiftDown() && InputConstants.isKeyDown(InputConstants.KEY_INSERT));
     }
 
-    private static boolean isControlDown(long handle) {
-        return isKeyPressed(handle, GLFW.GLFW_KEY_LEFT_CONTROL)
-                || isKeyPressed(handle, GLFW.GLFW_KEY_RIGHT_CONTROL);
+    public static boolean isPasteShortcut(KeyEvent input) {
+        return input.isPaste() || (input.key() == InputConstants.KEY_INSERT && input.hasShiftDown());
     }
 
-    private static boolean isShiftDown(long handle) {
-        return isKeyPressed(handle, GLFW.GLFW_KEY_LEFT_SHIFT)
-                || isKeyPressed(handle, GLFW.GLFW_KEY_RIGHT_SHIFT);
+    private static boolean isControlDown() {
+        return InputConstants.isKeyDown(InputConstants.KEY_LCONTROL)
+                || InputConstants.isKeyDown(InputConstants.KEY_RCONTROL);
     }
 
-    private static boolean isKeyPressed(long handle, int keyCode) {
-        int state = GLFW.glfwGetKey(handle, keyCode);
-        return state == GLFW.GLFW_PRESS || state == GLFW.GLFW_REPEAT;
+    private static boolean isShiftDown() {
+        return InputConstants.isKeyDown(InputConstants.KEY_LSHIFT)
+                || InputConstants.isKeyDown(InputConstants.KEY_RSHIFT);
     }
 }

@@ -25,10 +25,23 @@ Paste large texts directly into writable books and signs with automatic formatti
 
 ## ⚙️ Compatibility
 
-- **Minecraft:** `1.16.1` up to `26.1.2`.
+- **Minecraft:** Java Edition `26.3` (this branch).
 - **Mod Loaders:** Fabric.
-- Built with a unified multi-version architecture ensuring identical behavior across all supported versions.
+- Requires **Java 25**, **Fabric Loader 0.19.5 or newer**, and **Fabric API for 26.3**.
 - Compatible with popular book and sign improvement mods (e.g., Scholar, Scribble).
+
+## Build
+
+This branch is based on `26.2` and builds the 26.3 mod directly from `src/main`.
+Use a Java 25 JDK and run:
+
+```powershell
+.\gradlew.bat build
+```
+
+The mod is written to `build/libs/bookpaste-2.2+26.3.jar`.
+`Ctrl+V` (or `Cmd+V` on macOS) and `Shift+Insert` paste text; `F8` cycles the formatting mode.
+The formatting hotkey can be changed in Minecraft's controls settings.
 
 ## 📄 License
 

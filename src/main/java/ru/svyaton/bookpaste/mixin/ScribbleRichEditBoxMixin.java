@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.input.KeyEvent;
 import ru.svyaton.bookpaste.BookPasteInputUtil;
 import ru.svyaton.bookpaste.ScribbleCompat;
 
@@ -14,8 +14,8 @@ import ru.svyaton.bookpaste.ScribbleCompat;
 @Mixin(targets = "me.chrr.scribble.gui.edit.RichEditBox", remap = false)
 abstract class ScribbleRichEditBoxMixin {
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true, remap = false)
-    private void bookpaste$handleScribblePaste(CallbackInfoReturnable<Boolean> cir) {
-        if (BookPasteInputUtil.isPasteShortcutPressed(MinecraftClient.getInstance()) && ScribbleCompat.handlePaste()) {
+    private void bookpaste$handleScribblePaste(KeyEvent input, CallbackInfoReturnable<Boolean> cir) {
+        if (BookPasteInputUtil.isPasteShortcut(input) && ScribbleCompat.handlePaste()) {
             cir.setReturnValue(true);
         }
     }

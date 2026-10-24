@@ -2,7 +2,7 @@ package ru.svyaton.bookpaste;
 
 import java.util.List;
 
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.player.Player;
 
 public interface BookPasteBookEditAccess {
     List<String> bookpaste$getPages();
@@ -11,5 +11,5 @@ public interface BookPasteBookEditAccess {
 
     void bookpaste$setPagesAndCurrentPage(List<String> pages, int currentPage);
 
-    PlayerEntity bookpaste$getPlayer();
+    Player bookpaste$getPlayer();
 }

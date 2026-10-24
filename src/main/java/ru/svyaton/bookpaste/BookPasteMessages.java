@@ -1,21 +1,21 @@
 package ru.svyaton.bookpaste;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
 
 public final class BookPasteMessages {
     private BookPasteMessages() {
     }
 
-    public static void showModeChanged(MinecraftClient client, PasteFormatMode mode) {
+    public static void showModeChanged(Minecraft client, PasteFormatMode mode) {
         if (client.player == null) {
             return;
         }
 
-        client.player.sendMessage(Text.literal(I18n.translate(
+        client.player.sendOverlayMessage(Component.literal(I18n.get(
                 "text.bookpaste.mode.changed",
-                I18n.translate("text.bookpaste.config.mode." + mode.id())
-        )), true);
+                I18n.get("text.bookpaste.config.mode." + mode.id())
+        )));
     }
 }
