@@ -13,7 +13,7 @@ Paste large texts directly into writable books and signs with automatic formatti
 
 - **Books:** Intercepts paste in the writable book screen. Splits large clipboard text across book pages automatically.
 - **Signs:** Seamlessly pastes text into signs, splitting words correctly across lines.
-- **Smart Formatting:** Prefers paragraph, line, sentence, or word boundaries when cutting pages or lines, preventing awkward word cuts.
+- **Formatting Modes:** Fills book pages to capacity by default, preserving the pasted text and line breaks. The optional whole-paragraph mode keeps paragraphs together when possible. Signs prefer punctuation or word boundaries when splitting lines.
 - **Overflow Handling:** When a book becomes full, the mod leaves only the unfinished tail in your clipboard and shows an on-screen notification.
 
 ## 📖 Usage

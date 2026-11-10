@@ -67,8 +67,7 @@ public final class ScribbleCompat {
 
                 String base = workingPages.get(pageIndex);
                 PasteHelper.PageSlice slice = PasteHelper.buildPage(base, remaining,
-                        candidate -> fitsOnPage(candidate, client),
-                        pageIndex == 99);
+                        candidate -> fitsOnPage(candidate, client));
                 boolean consumed = !slice.remainingText().equals(remaining);
 
                 if (!slice.pageText().equals(base)) {

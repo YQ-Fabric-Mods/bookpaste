@@ -15,44 +15,29 @@ public final class PasteHelper {
         return text.replace("\r\n", "\n").replace('\r', '\n');
     }
 
-    public static PageSlice buildPage(String base, String remaining, PageFitter fitter, boolean finalBookPage) {
+    public static PageSlice buildPage(String base, String remaining, PageFitter fitter) {
         if (remaining.isEmpty()) {
             return new PageSlice(base, "");
         }
 
-        if (BookPasteConfigManager.getConfig().formatMode() == PasteFormatMode.WHOLE_PARAGRAPHS) {
-            PageSlice paragraphSlice = buildWholeParagraphPage(base, remaining, fitter, finalBookPage);
-            if (paragraphSlice != null) {
-                return paragraphSlice;
-            }
-        }
-
         int maxAppend = findMaxAppend(base, remaining, fitter);
         if (maxAppend <= 0) {
             return new PageSlice(base, remaining);
         }
 
-        int preferredCut = chooseCutIndex(remaining, maxAppend, finalBookPage);
-        String addition = trimRight(remaining.substring(0, preferredCut));
-        if (addition.isEmpty()) {
-            addition = remaining.substring(0, maxAppend);
-            preferredCut = maxAppend;
+        if (BookPasteConfigManager.getConfig().formatMode() == PasteFormatMode.WHOLE_PARAGRAPHS) {
+            return buildWholeParagraphPage(base, remaining, maxAppend);
         }
 
-        return new PageSlice(base + addition, trimLeft(remaining.substring(preferredCut)));
+        return buildFilledPage(base, remaining, maxAppend);
     }
 
-    private static PageSlice buildWholeParagraphPage(String base, String remaining, PageFitter fitter, boolean finalBookPage) {
-        int maxAppend = findMaxAppend(base, remaining, fitter);
-        if (maxAppend <= 0) {
-            return new PageSlice(base, remaining);
-        }
-
+    private static PageSlice buildWholeParagraphPage(String base, String remaining, int maxAppend) {
         if (maxAppend >= remaining.length()) {
             return new PageSlice(base + trimRight(remaining), "");
         }
 
-        int paragraphCut = findLastBoundary(remaining, "\n\n", maxAppend, 0.0D);
+        int paragraphCut = remaining.lastIndexOf("\n\n", maxAppend - 1);
         if (paragraphCut > 0) {
             String addition = trimRight(remaining.substring(0, paragraphCut));
             if (!addition.isEmpty()) {
@@ -64,18 +49,11 @@ public final class PasteHelper {
             return new PageSlice(base, remaining);
         }
 
-        return buildSmartPage(base, remaining, fitter, finalBookPage, maxAppend);
+        return buildFilledPage(base, remaining, maxAppend);
     }
 
-    private static PageSlice buildSmartPage(String base, String remaining, PageFitter fitter, boolean finalBookPage, int maxAppend) {
-        int preferredCut = chooseCutIndex(remaining, maxAppend, finalBookPage);
-        String addition = trimRight(remaining.substring(0, preferredCut));
-        if (addition.isEmpty()) {
-            addition = remaining.substring(0, maxAppend);
-            preferredCut = maxAppend;
-        }
-
-        return new PageSlice(base + addition, trimLeft(remaining.substring(preferredCut)));
+    private static PageSlice buildFilledPage(String base, String remaining, int maxAppend) {
+        return new PageSlice(base + remaining.substring(0, maxAppend), remaining.substring(maxAppend));
     }
 
     public static Component createStatusMessage(int pagesUsed, String remaining, PageFitter fitter) {
@@ -210,17 +188,15 @@ public final class PasteHelper {
         }
 
         int usedPages = 0;
-        int pageInBook = 0;
 
         while (!left.isEmpty()) {
-            PageSlice slice = buildPage("", left, fitter, pageInBook == 99);
+            PageSlice slice = buildPage("", left, fitter);
             if (slice.pageText().isEmpty() && slice.remainingText().equals(left)) {
                 return 1;
             }
 
             left = slice.remainingText();
             usedPages++;
-            pageInBook = (pageInBook + 1) % 100;
         }
 
         return Math.max(1, (usedPages + 100 - 1) / 100);
@@ -240,62 +216,14 @@ public final class PasteHelper {
             }
         }
 
+        // Keep supplementary characters intact when a page ends between UTF-16 code units.
+        if (low > 0 && low < remaining.length()
+                && Character.isHighSurrogate(remaining.charAt(low - 1))
+                && Character.isLowSurrogate(remaining.charAt(low))) {
+            low--;
+        }
+
         return low;
-    }
-
-    private static int chooseCutIndex(String remaining, int maxAppend, boolean finalBookPage) {
-        if (maxAppend >= remaining.length()) {
-            return remaining.length();
-        }
-
-        if (finalBookPage) {
-            int paragraphCut = findLastBoundary(remaining, "\n\n", maxAppend, 0.3D);
-            if (paragraphCut > 0) {
-                return paragraphCut;
-            }
-
-            int lineCut = findLastBoundary(remaining, "\n", maxAppend, 0.45D);
-            if (lineCut > 0) {
-                return lineCut;
-            }
-
-            int strongSentenceCut = findSentenceBoundary(remaining, maxAppend, 0.45D);
-            if (strongSentenceCut > 0) {
-                return strongSentenceCut;
-            }
-
-            int softPunctuationCut = findSoftPunctuationBoundary(remaining, maxAppend, 0.6D);
-            if (softPunctuationCut > 0) {
-                return softPunctuationCut;
-            }
-
-            int whitespaceCut = findWhitespaceBoundary(remaining, maxAppend, 0.78D);
-            if (whitespaceCut > 0) {
-                return whitespaceCut;
-            }
-        }
-
-        int paragraphCut = findLastBoundary(remaining, "\n\n", maxAppend, 0.7D);
-        if (paragraphCut > 0) {
-            return paragraphCut;
-        }
-
-        int lineCut = findLastBoundary(remaining, "\n", maxAppend, 0.8D);
-        if (lineCut > 0) {
-            return lineCut;
-        }
-
-        int sentenceCut = findSentenceBoundary(remaining, maxAppend, 0.85D);
-        if (sentenceCut > 0) {
-            return sentenceCut;
-        }
-
-        int whitespaceCut = findWhitespaceBoundary(remaining, maxAppend, 0.92D);
-        if (whitespaceCut > 0) {
-            return whitespaceCut;
-        }
-
-        return maxAppend;
     }
 
     private static int findSoftPunctuationBoundary(String text, int maxIndex, double minFillRatio) {
@@ -320,12 +248,6 @@ public final class PasteHelper {
     private static boolean isClosingChar(char character) {
         return character == '"' || character == '\'' || character == ')' || character == ']'
                 || character == '}' || character == '\u00BB';
-    }
-
-    private static int findLastBoundary(String text, String token, int maxIndex, double minFillRatio) {
-        int minIndex = Math.max(1, (int)Math.floor(maxIndex * minFillRatio));
-        int boundary = text.lastIndexOf(token, Math.min(maxIndex - 1, text.length() - 1));
-        return boundary >= minIndex ? boundary : -1;
     }
 
     private static int findSentenceBoundary(String text, int maxIndex, double minFillRatio) {

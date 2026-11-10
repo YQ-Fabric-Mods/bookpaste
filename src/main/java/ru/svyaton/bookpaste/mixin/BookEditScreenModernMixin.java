@@ -105,8 +105,8 @@ abstract class BookEditScreenModernMixin implements BookPasteScreenHandler, Book
             }
 
             String base = workingPages.get(pageIndex);
-            PasteHelper.PageSlice slice = PasteHelper.buildPage(base, remaining, candidate -> bookpaste$fitsOnPage(candidate, client),
-                    pageIndex == 99);
+            PasteHelper.PageSlice slice = PasteHelper.buildPage(base, remaining,
+                    candidate -> bookpaste$fitsOnPage(candidate, client));
             boolean consumedText = !slice.remainingText().equals(remaining);
 
             if (!slice.pageText().equals(base)) {
